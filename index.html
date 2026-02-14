@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>She Build Empire</title>
+
+<style>
+body{
+margin:0;
+overflow:hidden;
+background:#f4f4f4;
+font-family:Arial;
+text-align:center;
+}
+
+#topBar{
+padding:15px;
+font-size:20px;
+font-weight:bold;
+color:gold;
+text-shadow:0 0 8px gold;
+}
+
+.coin{
+width:40px;
+height:40px;
+border-radius:50%;
+position:absolute;
+top:-50px;
+}
+
+.real{background:gold; box-shadow:0 0 10px gold;}
+.fake{background:red;}
+
+#box{
+width:90px;
+height:20px;
+background:black;
+position:absolute;
+bottom:25px;
+left:50%;
+transform:translateX(-50%);
+border-radius:12px;
+}
+
+#gameOver{
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.9);
+color:white;
+padding-top:200px;
+}
+
+button{
+padding:15px 30px;
+font-size:18px;
+border:none;
+border-radius:10px;
+background:gold;
+}
+</style>
+</head>
+<body>
+
+<div id="topBar">
+Score: <span id="score">0</span> |
+Level: <span id="level">1</span> |
+Fake: <span id="fakeCount">0</span>/5
+</div>
+
+<div id="box"></div>
+
+<div id="gameOver">
+<h1 id="finalTitle"></h1>
+<p id="finalText"></p>
+<button onclick="restartGame()">Restart</button>
+</div>
+
+<script>
+
+/* ---------------- VARIABLES ---------------- */
+
+let score=0;
+let level=1;
+let fakeCount=0;
+let speed=2;
+let gameActive=true;
+let highScore=0;
+
+const box=document.getElementById("box");
+
+/* ---------------- SOUND SYSTEM (MOBILE SAFE) ---------------- */
+
+const clickSound = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-game-click-1114.mp3");
+const bellSound = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-bell-notification-933.mp3");
+
+/* unlock sound on first touch */
+document.addEventListener("touchstart",()=>{
+clickSound.play().then(()=>clickSound.pause());
+bellSound.play().then(()=>bellSound.pause());
+},{once:true});
+
+function playClick(){
+clickSound.currentTime=0;
+clickSound.play();
+}
+
+function playBell(){
+bellSound.currentTime=0;
+bellSound.play();
+}
+
+/* ---------------- UI UPDATE ---------------- */
+
+function updateUI(){
+document.getElementById("score").innerText=score;
+document.getElementById("level").innerText=level;
+document.getElementById("fakeCount").innerText=fakeCount;
+}
+
+/* ---------------- MOVE BOX ---------------- */
+
+document.addEventListener("touchmove",(e)=>{
+let x=e.touches[0].clientX;
+let boxWidth=box.offsetWidth;
+let newX=x-(boxWidth/2);
+
+/* keep inside screen */
+if(newX<0) newX=0;
+if(newX>window.innerWidth-boxWidth)
+newX=window.innerWidth-boxWidth;
+
+box.style.left=newX+"px";
+});
+
+/* ---------------- SPAWN COINS ---------------- */
+
+function spawnCoin(){
+if(!gameActive) return;
+
+let coin=document.createElement("div");
+coin.classList.add("coin");
+
+let isFake=Math.random()<0.3;
+
+if(isFake){
+coin.classList.add("fake");
+}else{
+coin.classList.add("real");
+}
+
+coin.style.left=Math.random()*(window.innerWidth-40)+"px";
+document.body.appendChild(coin);
+
+let fall=setInterval(()=>{
+
+let top=coin.offsetTop;
+coin.style.top=top+speed+"px";
+
+/* COLLISION DETECTION */
+let coinRect=coin.getBoundingClientRect();
+let boxRect=box.getBoundingClientRect();
+
+if(
+coinRect.bottom >= boxRect.top &&
+coinRect.left < boxRect.right &&
+coinRect.right > boxRect.left
+){
+
+if(isFake){
+fakeCount++;
+playBell();
+if(fakeCount>=5){
+gameOver();
+}
+}else{
+score++;
+playClick();
+
+/* LEVEL SYSTEM */
+if(score%10===0 && level<20){
+level++;
+if(level>=2){
+speed+=0.5;
+}
+}
+}
+
+coin.remove();
+clearInterval(fall);
+updateUI();
+}
+
+/* remove if missed */
+if(top>window.innerHeight){
+coin.remove();
+clearInterval(fall);
+}
+
+},20);
+}
+
+setInterval(spawnCoin,900);
+
+/* ---------------- GAME OVER ---------------- */
+
+function gameOver(){
+gameActive=false;
+
+if(score>highScore){
+highScore=score;
+}
+
+document.getElementById("gameOver").style.display="block";
+
+if(level>=20){
+document.getElementById("finalTitle").innerText="🏆 MAX LEVEL 20!";
+}else{
+document.getElementById("finalTitle").innerText="GAME OVER 😈";
+}
+
+document.getElementById("finalText").innerText=
+"Score: "+score+" | High Score: "+highScore;
+}
+
+/* ---------------- RESTART ---------------- */
+
+function restartGame(){
+score=0;
+level=1;
+fakeCount=0;
+speed=2;
+gameActive=true;
+
+updateUI();
+document.getElementById("gameOver").style.display="none";
+}
+
+updateUI();
+
+</script>
+</body>
+</html>
